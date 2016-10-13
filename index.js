@@ -43,8 +43,11 @@ https://tictactoe.localtunnel.me/login
 /* Uses the slack button feature to offer a real time bot to multiple teams */
 var Botkit = require('botkit');
 var board = [ '-', '-', '-', '-', '-', '-', '-', '-', '-']; //initialize empty board
+var isTaken = [ 0,0,0,0,0,0,0,0,0]; //keep track of which squares have been filled
 var playerTurn = 0; //keeps track of which player's move it is'
 var inProgress = 0; //1 if there is a game in progress
+var players = [];
+//var hasMoved = 0; //let a player attempt to move until they make a valid move
 
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT || !process.env.VERIFICATION_TOKEN) {
     console.log('Error: Specify CLIENT_ID, CLIENT_SECRET, VERIFICATION_TOKEN and PORT in environment');
@@ -93,7 +96,10 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
 controller.on('slash_command', function (slashCommand, message) {
 
     switch (message.command) {
+        //check for proper slash command
         case "/ttt":
+
+        
 
             if (message.token !== process.env.VERIFICATION_TOKEN) return; //just ignore it.
 
@@ -106,32 +112,48 @@ controller.on('slash_command', function (slashCommand, message) {
                 return;
             }
 
-            if (message.text == "show board") {
-                slashCommand.replyPublicDelayed(message, "```" + board[0] + "|" + board[1] + "|" + board[2] + 
-                                                         "\n_ _ _\n" +
-                                                         board[3] + "|" + board[4] + "|" + board[5] +
-                                                         "\n_ _ _\n" + 
-                                                         board[6] + "|" + board[7] + "|" + board[8] + 
-                                                         "```");
+            //if no game then start a new one
+            if ( inProgress==0 ){
+                var opponent = message.text;
+                if ( stuff.substring(0, 1) == "@"){
+                    players[0] = "<@" + message.user + ">";
+                    players[1] = "<" + opponent + ">";
+                    slashCommand.replyPublic(message, "Player 1: " + players[0] + "\nPlayer 2: " + players[1]);
+                    break;
+                }
             }
 
+            //show board (should make function)
+            if (message.text == "show board") {
+                printBoard();
+                break;
+            }
+
+            //if input is a number from 1-9 place marker on that space
             if (message.text >= '1' && message.text <= '9') {
-                var spot = parseInt(message.text);
-                slashCommand.replyPublic(message, spot);
+                //convert input from string to int type
+                var spot = parseInt(message.text) - 1;
+                //slashCommand.replyPublic(message, spot);
+
+                //check if spot is used already
+                if ( isTaken[spot] == 1){
+                    slashCommand.replyPublicDelayed(message,"spot is taken, try again <@" + message.user +">");
+                    return;
+                }
+                //place marker
                 if (playerTurn == 0){
-                board[spot - 1] = 'X';
+                board[spot] = 'X';
+                isTaken[spot] = 1;
                 playerTurn = 1;
                 }
                 else {
-                    board[spot-1] = 'O'
+                    board[spot] = 'O'
+                    isTaken[spot] = 1;
                     playerTurn = 0;
                 }
-                slashCommand.replyPublicDelayed(message, "```" + board[0] + "|" + board[1] + "|" + board[2] + 
-                                                         "\n_ _ _\n" +
-                                                         board[3] + "|" + board[4] + "|" + board[5] +
-                                                         "\n_ _ _\n" + 
-                                                         board[6] + "|" + board[7] + "|" + board[8] + 
-                                                         "```");
+                //print board
+                printBoard();
+                break;
             }
             
             // If we made it here, just echo what the user typed back at them
@@ -141,6 +163,15 @@ controller.on('slash_command', function (slashCommand, message) {
         default:
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
 
+    }
+
+    function printBoard(){
+        slashCommand.replyPublicDelayed(message, "```" + board[0] + "|" + board[1] + "|" + board[2] + 
+                                                         "\n_ _ _\n" +
+                                                         board[3] + "|" + board[4] + "|" + board[5] +
+                                                         "\n_ _ _\n" + 
+                                                         board[6] + "|" + board[7] + "|" + board[8] + 
+                                                         "```");
     }
 
 })
