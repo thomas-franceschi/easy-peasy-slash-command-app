@@ -96,7 +96,6 @@ controller.on('slash_command', function (slashCommand, message) {
             //if input is a number from 1-9 place marker on that space
             if (message.text >= '1' && message.text <= '9') {
                 //check if player's turn
-                players[1] = players[0];
                 if (playerTurn == 0 && sender != players[0]){
                     slashCommand.replyPrivate(message, "it's not your turn, " + sender + ", its " + players[0] + "'s !");
                     break;
