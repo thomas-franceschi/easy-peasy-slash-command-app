@@ -1,49 +1,12 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ______    ______    ______   __  __    __    ______
- /\  == \  /\  __ \  /\__  _\ /\ \/ /   /\ \  /\__  _\
- \ \  __<  \ \ \/\ \ \/_/\ \/ \ \  _"-. \ \ \ \/_/\ \/
- \ \_____\ \ \_____\   \ \_\  \ \_\ \_\ \ \_\   \ \_\
- \/_____/  \/_____/    \/_/   \/_/\/_/  \/_/    \/_/
+//Tic Tac Toe Game
+//Thomas Franceschi
+//10/12/16
 
-
- This is a sample Slack Button application that provides a custom
- Slash command.
-
- This bot demonstrates many of the core features of Botkit:
-
- *
- * Authenticate users with Slack using OAuth
- * Receive messages using the slash_command event
- * Reply to Slash command both publicly and privately
-
- # RUN THE BOT:
-
- Create a Slack app. Make sure to configure at least one Slash command!
-
- -> https://api.slack.com/applications/new
-
- Run your bot from the command line:
-
- clientId=<my client id> clientSecret=<my client secret> PORT=3000 node bot.js
-
- Note: you can test your oauth authentication locally, but to use Slash commands
- in Slack, the app must be hosted at a publicly reachable IP or host.
-
-
- # EXTEND THE BOT:
-
- Botkit is has many features for building cool and useful bots!
-
- Read all about it here:
-https://tictactoe.localtunnel.me/login
- -> http://howdy.ai/botkit
-
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/* Uses the slack button feature to offer a real time bot to multiple teams */
 "use strict";
+
+//Initialize global variables
 var Botkit      = require('botkit');
-var board       = [ ' ', '-', ' ', '-', '+', '-', ' ', '-', ' ']; //initialize empty board
+var board       = [ '1', '2', '3', '4', '5', '6', '7', '8', '9']; //initialize empty board
 var isTaken     = [ 0,0,0,0,0,0,0,0,0]; //keep track of which squares have been filled
 var playerTurn  = 0; //keeps track of which player's move it is'
 var inProgress  = 0; //1 if there is a game in progress
@@ -196,21 +159,31 @@ controller.on('slash_command', function (slashCommand, message) {
         //check horizontal
         for (var i = 0; i < 3; i++){
             if (board[ 1 + ( 3 * i ) ] == board[ 2 + ( 3 * i )] && board[ 2 + ( 3 * i )] == board[ 3 + ( 3 * i )]){
-                slashCommand.replyPublic(message, player[playerTurn] + "has won!");
+                slashCommand.replyPublic(message, players[playerTurn] + "has won!");
                 cleanUp();
             }
         }
         //check vertical
         for (var i = 0; i < 3; i++){
             if (board[ 1 + i ] == board[ 4 + i ] && board[ 4 + i ] == board[ 7 + i ]){
-                slashCommand.replyPublic(message, player[playerTurn] + " has won!");
+                slashCommand.replyPublic(message, players[playerTurn] + " has won!");
                 cleanUp();
             }
+        }
+        //check diagonal
+        if ( board[1] == board[5] && board[5] == board[9] ){
+            slashCommand.replyPublic(message, players[playerTurn] + " has won!");
+            cleanUp();
+        }
+        if ( board[3] == board[5] && board[5] == board[7] ){
+            slashCommand.replyPublic(message, players[playerTurn] + " has won!");
+            cleanUp();
         }
     }
 
     function cleanUp(){
-        board       = [ ' ', '-', ' ', '-', '+', '-', ' ', '-', ' ']; //initialize empty board
+        //reset variables
+        board       = [ '1', '2', '3', '4', '5', '6', '7', '8', '9']; //initialize empty board
         isTaken     = [0,0,0,0,0,0,0,0,0]; //keep track of which squares have been filled
         playerTurn  = 0; //keeps track of which player's move it is'
         inProgress  = 0; //1 if there is a game in progress
