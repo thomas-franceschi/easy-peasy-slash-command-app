@@ -35,13 +35,16 @@
  Botkit is has many features for building cool and useful bots!
 
  Read all about it here:
-
+https://tictactoe.localtunnel.me/login
  -> http://howdy.ai/botkit
 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /* Uses the slack button feature to offer a real time bot to multiple teams */
 var Botkit = require('botkit');
+var board = [ '-', '-', '-', '-', '-', '-', '-', '-', '-']; //initialize empty board
+var playerTurn = 0; //keeps track of which player's move it is'
+var inProgress = 0; //1 if there is a game in progress
 
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT || !process.env.VERIFICATION_TOKEN) {
     console.log('Error: Specify CLIENT_ID, CLIENT_SECRET, VERIFICATION_TOKEN and PORT in environment');
@@ -85,29 +88,54 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
 // BEGIN EDITING HERE!
 //
 
+
+
 controller.on('slash_command', function (slashCommand, message) {
 
     switch (message.command) {
-        case "/echo": //handle the `/echo` slash command. We might have others assigned to this app too!
-            // The rules are simple: If there is no text following the command, treat it as though they had requested "help"
-            // Otherwise just echo back to them what they sent us.
+        case "/ttt":
 
-            // but first, let's make sure the token matches!
             if (message.token !== process.env.VERIFICATION_TOKEN) return; //just ignore it.
 
             // if no text was supplied, treat it as a help command
             if (message.text === "" || message.text === "help") {
-                slashCommand.replyPrivate(message,
-                    "I echo back what you tell me. " +
-                    "Try typing `/echo hello` to see.");
+                slashCommand.replyPrivate(message, "Play a game of tic-tac-toe!\nControls:\n" +
+                "@player - challenge player to game\n" + 
+                "show board - display current game board\n" + 
+                "'*1-9*' - select spot to place 'x' or 'o' (numbered from top left)\n");
                 return;
             }
 
+            if (message.text == "show board") {
+                slashCommand.replyPublicDelayed(message, "```" + board[0] + "|" + board[1] + "|" + board[2] + 
+                                                         "\n_ _ _\n" +
+                                                         board[3] + "|" + board[4] + "|" + board[5] +
+                                                         "\n_ _ _\n" + 
+                                                         board[6] + "|" + board[7] + "|" + board[8] + 
+                                                         "```");
+            }
+
+            if (message.text >= '1' && message.text <= '9') {
+                var spot = parseInt(message.text);
+                slashCommand.replyPublic(message, spot);
+                if (playerTurn == 0){
+                board[spot - 1] = 'X';
+                playerTurn = 1;
+                }
+                else {
+                    board[spot-1] = 'O'
+                    playerTurn = 0;
+                }
+                slashCommand.replyPublicDelayed(message, "```" + board[0] + "|" + board[1] + "|" + board[2] + 
+                                                         "\n_ _ _\n" +
+                                                         board[3] + "|" + board[4] + "|" + board[5] +
+                                                         "\n_ _ _\n" + 
+                                                         board[6] + "|" + board[7] + "|" + board[8] + 
+                                                         "```");
+            }
+            
             // If we made it here, just echo what the user typed back at them
-            //TODO You do it!
-            slashCommand.replyPublic(message, "1", function() {
-                slashCommand.replyPublicDelayed(message, "2").then(slashCommand.replyPublicDelayed(message, "3"));
-            });
+            else slashCommand.replyPrivate( message, message.text );
 
             break;
         default:
@@ -117,4 +145,3 @@ controller.on('slash_command', function (slashCommand, message) {
 
 })
 ;
-
