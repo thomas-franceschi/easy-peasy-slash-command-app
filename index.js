@@ -41,13 +41,14 @@ https://tictactoe.localtunnel.me/login
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /* Uses the slack button feature to offer a real time bot to multiple teams */
-var Botkit = require('botkit');
-var board = [ '-', '-', '-', '-', '-', '-', '-', '-', '-']; //initialize empty board
-var isTaken = [ 0,0,0,0,0,0,0,0,0]; //keep track of which squares have been filled
-var playerTurn = 0; //keeps track of which player's move it is'
-var inProgress = 0; //1 if there is a game in progress
-var players = [];
-//var hasMoved = 0; //let a player attempt to move until they make a valid move
+"use strict";
+var Botkit      = require('botkit');
+var board       = [ ' ', '-', ' ', '-', '+', '-', ' ', '-', ' ']; //initialize empty board
+var isTaken     = [ 0,0,0,0,0,0,0,0,0]; //keep track of which squares have been filled
+var playerTurn  = 0; //keeps track of which player's move it is'
+var inProgress  = 0; //1 if there is a game in progress
+var players     = []; //keep track of player ids
+var opponent;
 
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT || !process.env.VERIFICATION_TOKEN) {
     console.log('Error: Specify CLIENT_ID, CLIENT_SECRET, VERIFICATION_TOKEN and PORT in environment');
@@ -87,21 +88,15 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
 });
 
 
-//
-// BEGIN EDITING HERE!
-//
-
-
-
 controller.on('slash_command', function (slashCommand, message) {
 
     switch (message.command) {
         //check for proper slash command
         case "/ttt":
 
-        
-
             if (message.token !== process.env.VERIFICATION_TOKEN) return; //just ignore it.
+
+            var sender = "<@" + message.user + ">";
 
             // if no text was supplied, treat it as a help command
             if (message.text === "" || message.text === "help") {
@@ -109,28 +104,45 @@ controller.on('slash_command', function (slashCommand, message) {
                 "@player - challenge player to game\n" + 
                 "show board - display current game board\n" + 
                 "'*1-9*' - select spot to place 'x' or 'o' (numbered from top left)\n");
-                return;
+                break;
             }
 
+            if ( inProgress == 0 ) opponent = message.text;
+            
             //if no game then start a new one
-            if ( inProgress==0 ){
-                var opponent = message.text;
-                if ( stuff.substring(0, 1) == "@"){
-                    players[0] = "<@" + message.user + ">";
-                    players[1] = "<" + opponent + ">";
-                    slashCommand.replyPublic(message, "Player 1: " + players[0] + "\nPlayer 2: " + players[1]);
-                    break;
-                }
+            if ( opponent.substring(0, 1) == "@" && inProgress == 0){
+                players[0] = sender;
+                players[1] = "<" + opponent + ">";
+                slashCommand.replyPublic(message, "Player 1: " + players[0] + "\nPlayer 2: " + players[1]);
+                inProgress = 1;
+                break;
             }
 
-            //show board (should make function)
-            if (message.text == "show board") {
+            //quit current game
+            if (message.text == "quit") {
+                cleanUp();
+                slashCommand.replyPublic(message, "Game Over");
+            }
+            
+            //show board
+            if (message.text == "show board" && inProgress == 1) {
                 printBoard();
                 break;
             }
 
             //if input is a number from 1-9 place marker on that space
             if (message.text >= '1' && message.text <= '9') {
+                //check if player's turn
+                players[1] = players[0];
+                if (playerTurn == 0 && sender != players[0]){
+                    slashCommand.replyPrivate(message, "it's not your turn, " + sender + ", its " + players[0] + "'s !");
+                    break;
+                }
+                else if (playerTurn == 1 && sender != players[1]){
+                    slashCommand.replyPrivate(message, "it's not your turn, " + sender + ", its " + players[1] + "'s !");
+                    break;
+                }
+
                 //convert input from string to int type
                 var spot = parseInt(message.text) - 1;
                 //slashCommand.replyPublic(message, spot);
@@ -138,19 +150,24 @@ controller.on('slash_command', function (slashCommand, message) {
                 //check if spot is used already
                 if ( isTaken[spot] == 1){
                     slashCommand.replyPublicDelayed(message,"spot is taken, try again <@" + message.user +">");
-                    return;
+                    break;
                 }
                 //place marker
                 if (playerTurn == 0){
-                board[spot] = 'X';
-                isTaken[spot] = 1;
-                playerTurn = 1;
+                    board[spot] = 'X';
+                    //check for win
+                    isWin();
+                    isTaken[spot] = 1;
+                    playerTurn = 1;
                 }
                 else {
                     board[spot] = 'O'
+                    //check for win
+                    isWin();
                     isTaken[spot] = 1;
                     playerTurn = 0;
                 }
+                
                 //print board
                 printBoard();
                 break;
@@ -172,6 +189,32 @@ controller.on('slash_command', function (slashCommand, message) {
                                                          "\n_ _ _\n" + 
                                                          board[6] + "|" + board[7] + "|" + board[8] + 
                                                          "```");
+        slashCommand.replyPublicDelayed(message, "It is " + players[playerTurn] + " turn." );
+    }
+
+    function isWin(){
+        //check horizontal
+        for (var i = 0; i < 3; i++){
+            if (board[ 1 + ( 3 * i ) ] == board[ 2 + ( 3 * i )] && board[ 2 + ( 3 * i )] == board[ 3 + ( 3 * i )]){
+                slashCommand.replyPublic(message, player[playerTurn] + "has won!");
+                cleanUp();
+            }
+        }
+        //check vertical
+        for (var i = 0; i < 3; i++){
+            if (board[ 1 + i ] == board[ 4 + i ] && board[ 4 + i ] == board[ 7 + i ]){
+                slashCommand.replyPublic(message, player[playerTurn] + " has won!");
+                cleanUp();
+            }
+        }
+    }
+
+    function cleanUp(){
+        board       = [ ' ', '-', ' ', '-', '+', '-', ' ', '-', ' ']; //initialize empty board
+        isTaken     = [0,0,0,0,0,0,0,0,0]; //keep track of which squares have been filled
+        playerTurn  = 0; //keeps track of which player's move it is'
+        inProgress  = 0; //1 if there is a game in progress
+        players     = []; //keep track of player ids
     }
 
 })
